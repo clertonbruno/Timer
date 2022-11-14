@@ -3,6 +3,13 @@ import * as S from './Home.styles';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
+import { useState } from 'react';
+
+interface Timer {
+  id: string;
+  task: string;
+  minutesDuration: number;
+}
 
 const newTimerFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Task is required'),
@@ -22,6 +29,10 @@ type NewTimerFormValues = zod.infer<typeof newTimerFormValidationSchema>;
 // }
 
 export const Home = () => {
+  const [timers, setTimers] = useState<Timer[]>([]);
+  const [activeTimerId, setActiveTimerId] = useState<string | null>(null);
+  const [passedTimeInSeconds, setPassedTimeInSeconds] = useState<number>(0);
+
   const {
     register,
     handleSubmit,
@@ -36,10 +47,36 @@ export const Home = () => {
     },
   });
 
-  const onSubmit = (data: NewTimerFormValues) => {
+  const handleNewTimer = (data: NewTimerFormValues) => {
     console.log('Submitted info provided by the handleSubmit > ', data);
+    const newTimer: Timer = {
+      id: Math.random().toString(36).substr(2, 9),
+      task: data.task,
+      minutesDuration: data.minutesDuration,
+    };
+    setActiveTimerId(newTimer.id);
+    setTimers((oldState) => [...oldState, newTimer]);
     reset();
   };
+
+  const activeTimer = timers.find((timer) => timer.id === activeTimerId);
+
+  const durationInSeconds = activeTimer ? activeTimer.minutesDuration * 60 : 0;
+
+  const remainingTimeInSeconds = activeTimer
+    ? durationInSeconds - passedTimeInSeconds
+    : 0;
+
+  const remainingFullMinutes = Math.floor(remainingTimeInSeconds / 60);
+  const remainingRestSeconds = remainingTimeInSeconds % 60;
+
+  const remainingMinutesFormatted = remainingFullMinutes
+    .toString()
+    .padStart(2, '0');
+
+  const remainingSecondsFormatted = remainingRestSeconds
+    .toString()
+    .padStart(2, '0');
 
   const task = watch('task');
 
@@ -47,7 +84,7 @@ export const Home = () => {
 
   return (
     <S.HomeContainer>
-      <form action='' onSubmit={handleSubmit(onSubmit)}>
+      <form action='' onSubmit={handleSubmit(handleNewTimer)}>
         <S.FormHeader>
           <label htmlFor='task'>Will work on</label>
           <S.TaskInput
@@ -81,11 +118,11 @@ export const Home = () => {
           <span>minutes.</span>
         </S.FormHeader>
         <S.CountdownContainer>
-          <span>0</span>
-          <span>0</span>
+          <span>{remainingMinutesFormatted[0]}</span>
+          <span>{remainingMinutesFormatted[1]}</span>
           <S.Separator>:</S.Separator>
-          <span>0</span>
-          <span>0</span>
+          <span>{remainingSecondsFormatted[0]}</span>
+          <span>{remainingSecondsFormatted[1]}</span>
         </S.CountdownContainer>
 
         <S.CountdownButton type='submit' disabled={!shouldEnableSubmit}>
