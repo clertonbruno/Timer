@@ -3,12 +3,14 @@ import * as S from './Home.styles';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { differenceInSeconds } from 'date-fns';
 
 interface Timer {
   id: string;
   task: string;
   minutesDuration: number;
+  startDate: Date;
 }
 
 const newTimerFormValidationSchema = zod.object({
@@ -53,6 +55,7 @@ export const Home = () => {
       id: Math.random().toString(36).substr(2, 9),
       task: data.task,
       minutesDuration: data.minutesDuration,
+      startDate: new Date(),
     };
     setActiveTimerId(newTimer.id);
     setTimers((oldState) => [...oldState, newTimer]);
@@ -81,6 +84,19 @@ export const Home = () => {
   const task = watch('task');
 
   const shouldEnableSubmit = task && task.length > 0;
+
+  useEffect(() => {
+    if (activeTimerId) {
+      const interval = setInterval(() => {
+        const timeElapseInSeconds = differenceInSeconds(
+          new Date(),
+          activeTimer?.startDate
+        );
+        setPassedTimeInSeconds(timeElapseInSeconds);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTimerId]);
 
   return (
     <S.HomeContainer>
