@@ -1,4 +1,4 @@
-import { Play } from 'phosphor-react';
+import { HandPalm, Play } from 'phosphor-react';
 import * as S from './Home.styles';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +11,8 @@ interface Timer {
   task: string;
   minutesDuration: number;
   startDate: Date;
+  interruptedDate?: Date;
+  endDate?: Date;
 }
 
 const newTimerFormValidationSchema = zod.object({
@@ -63,7 +65,20 @@ export const Home = () => {
     reset();
   };
 
-  const activeTimer = timers.find((timer) => timer.id === activeTimerId);
+  const handleInterrupTimer = () => {
+    const updatedTimerList = timers.map((timer, index) => {
+      if (timer.id === activeTimerId) {
+        return { ...timer, interruptedDate: new Date() };
+      }
+      return timer;
+    });
+    setTimers(updatedTimerList);
+    setActiveTimerId(null);
+  };
+
+  const activeTimer: Timer | undefined = timers.find(
+    (timer) => timer.id === activeTimerId
+  );
 
   const durationInSeconds = activeTimer ? activeTimer.minutesDuration * 60 : 0;
 
@@ -95,17 +110,30 @@ export const Home = () => {
   const shouldEnableSubmit = task && task.length > 0;
 
   useEffect(() => {
-    if (activeTimerId) {
+    if (activeTimer) {
       const interval = setInterval(() => {
         const timeElapseInSeconds = differenceInSeconds(
           new Date(),
-          activeTimer?.startDate
+          activeTimer.startDate
         );
-        setPassedTimeInSeconds(timeElapseInSeconds);
+
+        if (timeElapseInSeconds >= durationInSeconds) {
+          const updatedTimerList = timers.map((timer) => {
+            if (timer.id === activeTimerId) {
+              return { ...timer, endDate: new Date() };
+            }
+            return timer;
+          });
+          setTimers(updatedTimerList);
+          setPassedTimeInSeconds(durationInSeconds);
+          clearInterval(interval);
+        } else {
+          setPassedTimeInSeconds(timeElapseInSeconds);
+        }
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [activeTimerId]);
+  }, [activeTimerId, durationInSeconds]);
 
   return (
     <S.HomeContainer>
@@ -117,6 +145,7 @@ export const Home = () => {
             type='text'
             list='task-list'
             placeholder='Task name'
+            disabled={!!activeTimer}
             {...register('task', { required: true })}
           />
           <datalist id='task-list'>
@@ -131,6 +160,7 @@ export const Home = () => {
             type='number'
             id='minutesDuration'
             placeholder='00'
+            disabled={!!activeTimer}
             step={5}
             min={5}
             max={60}
@@ -150,10 +180,17 @@ export const Home = () => {
           <span>{remainingSecondsFormatted[1]}</span>
         </S.CountdownContainer>
 
-        <S.CountdownButton type='submit' disabled={!shouldEnableSubmit}>
-          <Play size={24} />
-          Start
-        </S.CountdownButton>
+        {activeTimer ? (
+          <S.StopCountdownButton type='button' onClick={handleInterrupTimer}>
+            <HandPalm size={24} />
+            Stop
+          </S.StopCountdownButton>
+        ) : (
+          <S.StartCountdownButton type='submit' disabled={!shouldEnableSubmit}>
+            <Play size={24} />
+            Start
+          </S.StartCountdownButton>
+        )}
       </form>
     </S.HomeContainer>
   );

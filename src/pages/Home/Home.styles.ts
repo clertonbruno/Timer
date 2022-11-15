@@ -1,4 +1,4 @@
-import styled, { ThemeConsumer } from 'styled-components';
+import styled from 'styled-components';
 
 export const HomeContainer = styled.main`
   display: flex;
@@ -83,29 +83,39 @@ export const Separator = styled.div`
   justify-content: center;
 `;
 
-export const CountdownButton = styled.button`
+const BaseCountdownButton = styled.button`
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.8rem;
+  color: ${({ theme }) => theme['gray-100']};
   cursor: pointer;
   padding: 1.6rem;
   border-radius: 8px;
-  background-color: ${({ theme }) => theme['green-500']};
-  color: ${({ theme }) => theme['gray-100']};
+
   font-size: 1.6rem;
   font-weight: bold;
   border: 0;
 
   transition: background-color 0.05s;
 
-  &:not(:disabled):hover {
-    background-color: ${({ theme }) => theme['green-700']};
-  }
-
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+  }
+`;
+
+export const StartCountdownButton = styled(BaseCountdownButton)`
+  background-color: ${({ theme }) => theme['green-500']};
+  &:not(:disabled):hover {
+    background-color: ${({ theme }) => theme['green-700']};
+  }
+`;
+
+export const StopCountdownButton = styled(BaseCountdownButton)`
+  background-color: ${({ theme }) => theme['red-500']};
+  &:not(:disabled):hover {
+    background-color: ${({ theme }) => theme['red-700']};
   }
 `;
