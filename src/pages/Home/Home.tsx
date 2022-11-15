@@ -50,6 +50,7 @@ export const Home = () => {
   });
 
   const handleNewTimer = (data: NewTimerFormValues) => {
+    setPassedTimeInSeconds(0);
     console.log('Submitted info provided by the handleSubmit > ', data);
     const newTimer: Timer = {
       id: Math.random().toString(36).substr(2, 9),
@@ -80,6 +81,14 @@ export const Home = () => {
   const remainingSecondsFormatted = remainingRestSeconds
     .toString()
     .padStart(2, '0');
+
+  useEffect(() => {
+    if (!activeTimer) {
+      return;
+    }
+
+    document.title = `${remainingMinutesFormatted}:${remainingSecondsFormatted} - ${activeTimer.task}`;
+  }, [remainingMinutesFormatted, remainingSecondsFormatted, activeTimer]);
 
   const task = watch('task');
 
