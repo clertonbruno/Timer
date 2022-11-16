@@ -96,7 +96,6 @@ export const Home = () => {
 
   const handleNewTimer = (data: NewTimerFormValues) => {
     setPassedTimeInSeconds(0);
-    console.log('Submitted info provided by the handleSubmit > ', data);
     const newTimer: Timer = {
       id: Math.random().toString(36).substr(2, 9),
       task: data.task,
@@ -145,7 +144,6 @@ export const Home = () => {
           </S.StartCountdownButton>
         )}
       </form>
-      <pre>{JSON.stringify(timersState.timers, null, 2)}</pre>
     </S.HomeContainer>
   );
 };

@@ -9,16 +9,13 @@ export const History = () => {
 
   useEffect(() => {
     const timersHistory = getLocalStorage('timers-state');
-    console.log('timersHistory', timersHistory);
     if (timersHistory) {
-      console.log('Inside', JSON.parse(timersHistory));
       setTimers(JSON.parse(timersHistory).timers);
     }
   }, []);
 
   return (
     <S.HistoryContainer>
-      <pre>{JSON.stringify(timers)}</pre>
       <h1>My History</h1>
       <S.HistoryList>
         <table>
