@@ -1,5 +1,5 @@
 import { differenceInSeconds } from 'date-fns';
-import { useState, useContext, useEffect } from 'react';
+import { useContext, useEffect } from 'react';
 import { TimerContext } from '../../Home';
 import { CountdownContainer, Separator } from './Countdowm.styles';
 
@@ -19,7 +19,7 @@ export const Countdown = () => {
       const interval = setInterval(() => {
         const timeElapseInSeconds = differenceInSeconds(
           new Date(),
-          activeTimer.startDate
+          new Date(activeTimer.startDate)
         );
 
         if (timeElapseInSeconds >= durationInSeconds) {

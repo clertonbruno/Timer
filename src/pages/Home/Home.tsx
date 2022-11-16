@@ -3,18 +3,17 @@ import * as S from './Home.styles';
 import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
-import { createContext, useState, useReducer } from 'react';
+import { createContext, useState, useReducer, useEffect } from 'react';
 import { TimerForm } from './components/TimerForm/TimerForm';
 import { Countdown } from './components/Countdown/Countdown';
-
-interface Timer {
-  id: string;
-  task: string;
-  minutesDuration: number;
-  startDate: Date;
-  interruptedDate?: Date;
-  endDate?: Date;
-}
+import { Timer, timersReducer } from '../../reducers/timers/reducer';
+import {
+  addNewTimerAction,
+  interruptCurrentTimerAction,
+  markCurrentTimerAsFinishedAction,
+} from '../../reducers/timers/actions';
+import { useStorage } from '../../hooks/useStorage';
+import { differenceInSeconds } from 'date-fns';
 
 const newTimerFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Task is required'),
@@ -43,64 +42,34 @@ interface TimerContextType {
 
 export const TimerContext = createContext({} as TimerContextType);
 
-interface TimersState {
-  timers: Timer[];
-  activeTimerId: string | null;
-}
-
 export const Home = () => {
+  const { getLocalStorage } = useStorage();
   const [timersState, dispatch] = useReducer(
-    (state: TimersState, action: any) => {
-      switch (action.type) {
-        case 'ADD_TIMER':
-          return {
-            ...state,
-            timers: [...state.timers, action.payload],
-            activeTimerId: action.payload.id,
-          };
-        case 'MARK_CURRENT_TIMER_AS_FINISHED':
-          const timersWithNewFinishedTimer = state.timers.map((timer) => {
-            if (timer.id === state.activeTimerId) {
-              return { ...timer, endDate: new Date() };
-            }
-            return timer;
-          });
-
-          return {
-            ...state,
-            timers: timersWithNewFinishedTimer,
-            activeTimerId: null,
-          };
-        case 'INTERRUPT_CURRENT_TIMER':
-          const timersWithNewInterruptedTimer = state.timers.map((timer) => {
-            if (timer.id === state.activeTimerId) {
-              return { ...timer, interruptedDate: new Date() };
-            }
-            return timer;
-          });
-
-          return {
-            ...state,
-            timers: timersWithNewInterruptedTimer,
-            activeTimerId: null,
-          };
-        default:
-          return state;
-      }
-    },
+    timersReducer,
     {
       timers: [],
       activeTimerId: null,
+    },
+    () => {
+      const localData = getLocalStorage('timers-state');
+      return localData
+        ? JSON.parse(localData)
+        : { timers: [], activeTimerId: null };
     }
   );
 
-  const [passedTimeInSeconds, setPassedTimeInSeconds] = useState<number>(0);
-
   const { activeTimerId } = timersState;
 
-  const activeTimer: Timer | undefined = timersState.timers.find(
+  const activeTimer: Timer | undefined = timersState?.timers?.find(
     (timer) => timer.id === activeTimerId
   );
+
+  const [passedTimeInSeconds, setPassedTimeInSeconds] = useState<number>(() => {
+    if (activeTimer) {
+      return differenceInSeconds(new Date(), activeTimer.startDate);
+    }
+    return 0;
+  });
 
   const newTimerForm = useForm<NewTimerFormValues>({
     resolver: zodResolver(newTimerFormValidationSchema),
@@ -118,10 +87,7 @@ export const Home = () => {
   } = newTimerForm;
 
   const markCurrentTimerAsFinished = () => {
-    dispatch({
-      type: 'MARK_CURRENT_TIMER_AS_FINISHED',
-      payload: activeTimerId,
-    });
+    dispatch(markCurrentTimerAsFinishedAction());
   };
 
   const setSecondsPassed = (seconds: number) => {
@@ -137,18 +103,12 @@ export const Home = () => {
       minutesDuration: data.minutesDuration,
       startDate: new Date(),
     };
-    dispatch({
-      type: 'ADD_TIMER',
-      payload: newTimer,
-    });
+    dispatch(addNewTimerAction(newTimer));
     reset();
   };
 
   const handleInterrupTimer = () => {
-    dispatch({
-      type: 'INTERRUPT_CURRENT_TIMER',
-      payload: activeTimerId,
-    });
+    dispatch(interruptCurrentTimerAction());
   };
 
   const task = watch('task');
