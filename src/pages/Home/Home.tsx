@@ -60,12 +60,12 @@ export const Home = () => {
       }
 
       if (action.type === 'MARK_CURRENT_TIMER_AS_FINISHED') {
-        const currentTimerIndex = state.timers.findIndex(
-          (timer) => timer.id === state.activeTimerId
-        );
-
-        const newTimers = state.timers;
-        newTimers[currentTimerIndex].endDate = new Date();
+        const newTimers = state.timers.map((timer) => {
+          if (timer.id === state.activeTimerId) {
+            return { ...timer, endDate: new Date() };
+          }
+          return timer;
+        });
 
         return {
           ...state,
@@ -75,12 +75,12 @@ export const Home = () => {
       }
 
       if (action.type === 'INTERRUPT_CURRENT_TIMER') {
-        const currentTimerIndex = state.timers.findIndex(
-          (timer) => timer.id === state.activeTimerId
-        );
-
-        const newTimers = state.timers;
-        newTimers[currentTimerIndex].interruptedDate = new Date();
+        const newTimers = state.timers.map((timer) => {
+          if (timer.id === state.activeTimerId) {
+            return { ...timer, interruptedDate: new Date() };
+          }
+          return timer;
+        });
 
         return {
           ...state,
@@ -97,8 +97,9 @@ export const Home = () => {
     }
   );
 
-  const [activeTimerId, setActiveTimerId] = useState<string | null>(null);
   const [passedTimeInSeconds, setPassedTimeInSeconds] = useState<number>(0);
+
+  const { activeTimerId } = timersState;
 
   const activeTimer: Timer | undefined = timersState.timers.find(
     (timer) => timer.id === activeTimerId
@@ -139,7 +140,6 @@ export const Home = () => {
       minutesDuration: data.minutesDuration,
       startDate: new Date(),
     };
-    setActiveTimerId(newTimer.id);
     dispatch({
       type: 'ADD_TIMER',
       payload: newTimer,
@@ -152,7 +152,6 @@ export const Home = () => {
       type: 'INTERRUPT_CURRENT_TIMER',
       payload: activeTimerId,
     });
-    setActiveTimerId(null);
   };
 
   const task = watch('task');
