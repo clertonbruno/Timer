@@ -1,10 +1,12 @@
 import { HandPalm, Play } from 'phosphor-react';
 import * as S from './Home.styles';
-import { useForm } from 'react-hook-form';
+import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
-import { useEffect, useState } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import { differenceInSeconds } from 'date-fns';
+import { TimerForm } from './components/TimerForm/TimerForm';
+import { Countdown } from './components/Countdown/Countdown';
 
 interface Timer {
   id: string;
@@ -32,24 +34,54 @@ type NewTimerFormValues = zod.infer<typeof newTimerFormValidationSchema>;
 //   minutesDuration: number;
 // }
 
+interface TimerContextType {
+  activeTimer: Timer | undefined;
+  activeTimerId: string | null;
+  passedTimeInSeconds: number;
+  markCurrentTimerAsFinished: () => void;
+  setSecondsPassed: (seconds: number) => void;
+}
+
+export const TimerContext = createContext({} as TimerContextType);
+
 export const Home = () => {
   const [timers, setTimers] = useState<Timer[]>([]);
   const [activeTimerId, setActiveTimerId] = useState<string | null>(null);
   const [passedTimeInSeconds, setPassedTimeInSeconds] = useState<number>(0);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-    reset,
-  } = useForm<NewTimerFormValues>({
+  const activeTimer: Timer | undefined = timers.find(
+    (timer) => timer.id === activeTimerId
+  );
+
+  const newTimerForm = useForm<NewTimerFormValues>({
     resolver: zodResolver(newTimerFormValidationSchema),
     defaultValues: {
       task: '',
       minutesDuration: 0,
     },
   });
+
+  const {
+    handleSubmit,
+    watch,
+    formState: { errors },
+    reset,
+  } = newTimerForm;
+
+  const markCurrentTimerAsFinished = () => {
+    setTimers((oldState) => {
+      return oldState.map((timer) => {
+        if (timer.id === activeTimerId) {
+          return { ...timer, endDate: new Date() };
+        }
+        return timer;
+      });
+    });
+  };
+
+  const setSecondsPassed = (seconds: number) => {
+    setPassedTimeInSeconds(seconds);
+  };
 
   const handleNewTimer = (data: NewTimerFormValues) => {
     setPassedTimeInSeconds(0);
@@ -76,109 +108,27 @@ export const Home = () => {
     setActiveTimerId(null);
   };
 
-  const activeTimer: Timer | undefined = timers.find(
-    (timer) => timer.id === activeTimerId
-  );
-
-  const durationInSeconds = activeTimer ? activeTimer.minutesDuration * 60 : 0;
-
-  const remainingTimeInSeconds = activeTimer
-    ? durationInSeconds - passedTimeInSeconds
-    : 0;
-
-  const remainingFullMinutes = Math.floor(remainingTimeInSeconds / 60);
-  const remainingRestSeconds = remainingTimeInSeconds % 60;
-
-  const remainingMinutesFormatted = remainingFullMinutes
-    .toString()
-    .padStart(2, '0');
-
-  const remainingSecondsFormatted = remainingRestSeconds
-    .toString()
-    .padStart(2, '0');
-
-  useEffect(() => {
-    if (!activeTimer) {
-      return;
-    }
-
-    document.title = `${remainingMinutesFormatted}:${remainingSecondsFormatted} - ${activeTimer.task}`;
-  }, [remainingMinutesFormatted, remainingSecondsFormatted, activeTimer]);
-
   const task = watch('task');
 
   const shouldEnableSubmit = task && task.length > 0;
 
-  useEffect(() => {
-    if (activeTimer) {
-      const interval = setInterval(() => {
-        const timeElapseInSeconds = differenceInSeconds(
-          new Date(),
-          activeTimer.startDate
-        );
-
-        if (timeElapseInSeconds >= durationInSeconds) {
-          const updatedTimerList = timers.map((timer) => {
-            if (timer.id === activeTimerId) {
-              return { ...timer, endDate: new Date() };
-            }
-            return timer;
-          });
-          setTimers(updatedTimerList);
-          setPassedTimeInSeconds(durationInSeconds);
-          clearInterval(interval);
-        } else {
-          setPassedTimeInSeconds(timeElapseInSeconds);
-        }
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [activeTimerId, durationInSeconds]);
-
   return (
     <S.HomeContainer>
       <form action='' onSubmit={handleSubmit(handleNewTimer)}>
-        <S.FormHeader>
-          <label htmlFor='task'>Will work on</label>
-          <S.TaskInput
-            id='task'
-            type='text'
-            list='task-list'
-            placeholder='Task name'
-            disabled={!!activeTimer}
-            {...register('task', { required: true })}
-          />
-          <datalist id='task-list'>
-            <option value='Task 1' />
-            <option value='Task 2' />
-            <option value='Task 3' />
-            <option value='Task 4' />
-          </datalist>
-
-          <label htmlFor='minutesDuration'>Duration</label>
-          <S.MinutesInput
-            type='number'
-            id='minutesDuration'
-            placeholder='00'
-            disabled={!!activeTimer}
-            step={5}
-            min={5}
-            max={60}
-            {...register('minutesDuration', {
-              required: true,
-              valueAsNumber: true,
-            })}
-          />
-
-          <span>minutes.</span>
-        </S.FormHeader>
-        <S.CountdownContainer>
-          <span>{remainingMinutesFormatted[0]}</span>
-          <span>{remainingMinutesFormatted[1]}</span>
-          <S.Separator>:</S.Separator>
-          <span>{remainingSecondsFormatted[0]}</span>
-          <span>{remainingSecondsFormatted[1]}</span>
-        </S.CountdownContainer>
+        <TimerContext.Provider
+          value={{
+            activeTimer,
+            activeTimerId,
+            markCurrentTimerAsFinished,
+            passedTimeInSeconds,
+            setSecondsPassed,
+          }}
+        >
+          <FormProvider {...newTimerForm}>
+            <TimerForm />
+          </FormProvider>
+          <Countdown />
+        </TimerContext.Provider>
 
         {activeTimer ? (
           <S.StopCountdownButton type='button' onClick={handleInterrupTimer}>
