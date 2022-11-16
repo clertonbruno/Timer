@@ -51,45 +51,42 @@ interface TimersState {
 export const Home = () => {
   const [timersState, dispatch] = useReducer(
     (state: TimersState, action: any) => {
-      if (action.type === 'ADD_TIMER') {
-        return {
-          ...state,
-          timers: [...state.timers, action.payload],
-          activeTimerId: action.payload.id,
-        };
+      switch (action.type) {
+        case 'ADD_TIMER':
+          return {
+            ...state,
+            timers: [...state.timers, action.payload],
+            activeTimerId: action.payload.id,
+          };
+        case 'MARK_CURRENT_TIMER_AS_FINISHED':
+          const timersWithNewFinishedTimer = state.timers.map((timer) => {
+            if (timer.id === state.activeTimerId) {
+              return { ...timer, endDate: new Date() };
+            }
+            return timer;
+          });
+
+          return {
+            ...state,
+            timers: timersWithNewFinishedTimer,
+            activeTimerId: null,
+          };
+        case 'INTERRUPT_CURRENT_TIMER':
+          const timersWithNewInterruptedTimer = state.timers.map((timer) => {
+            if (timer.id === state.activeTimerId) {
+              return { ...timer, interruptedDate: new Date() };
+            }
+            return timer;
+          });
+
+          return {
+            ...state,
+            timers: timersWithNewInterruptedTimer,
+            activeTimerId: null,
+          };
+        default:
+          return state;
       }
-
-      if (action.type === 'MARK_CURRENT_TIMER_AS_FINISHED') {
-        const newTimers = state.timers.map((timer) => {
-          if (timer.id === state.activeTimerId) {
-            return { ...timer, endDate: new Date() };
-          }
-          return timer;
-        });
-
-        return {
-          ...state,
-          timers: newTimers,
-          activeTimerId: null,
-        };
-      }
-
-      if (action.type === 'INTERRUPT_CURRENT_TIMER') {
-        const newTimers = state.timers.map((timer) => {
-          if (timer.id === state.activeTimerId) {
-            return { ...timer, interruptedDate: new Date() };
-          }
-          return timer;
-        });
-
-        return {
-          ...state,
-          timers: newTimers,
-          activeTimerId: null,
-        };
-      }
-
-      return state;
     },
     {
       timers: [],
