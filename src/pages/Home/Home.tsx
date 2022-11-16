@@ -3,8 +3,7 @@ import * as S from './Home.styles';
 import { FormProvider, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
-import { createContext, useEffect, useState } from 'react';
-import { differenceInSeconds } from 'date-fns';
+import { createContext, useState, useReducer } from 'react';
 import { TimerForm } from './components/TimerForm/TimerForm';
 import { Countdown } from './components/Countdown/Countdown';
 
@@ -44,12 +43,64 @@ interface TimerContextType {
 
 export const TimerContext = createContext({} as TimerContextType);
 
+interface TimersState {
+  timers: Timer[];
+  activeTimerId: string | null;
+}
+
 export const Home = () => {
-  const [timers, setTimers] = useState<Timer[]>([]);
+  const [timersState, dispatch] = useReducer(
+    (state: TimersState, action: any) => {
+      if (action.type === 'ADD_TIMER') {
+        return {
+          ...state,
+          timers: [...state.timers, action.payload],
+          activeTimerId: action.payload.id,
+        };
+      }
+
+      if (action.type === 'MARK_CURRENT_TIMER_AS_FINISHED') {
+        const currentTimerIndex = state.timers.findIndex(
+          (timer) => timer.id === state.activeTimerId
+        );
+
+        const newTimers = state.timers;
+        newTimers[currentTimerIndex].endDate = new Date();
+
+        return {
+          ...state,
+          timers: newTimers,
+          activeTimerId: null,
+        };
+      }
+
+      if (action.type === 'INTERRUPT_CURRENT_TIMER') {
+        const currentTimerIndex = state.timers.findIndex(
+          (timer) => timer.id === state.activeTimerId
+        );
+
+        const newTimers = state.timers;
+        newTimers[currentTimerIndex].interruptedDate = new Date();
+
+        return {
+          ...state,
+          timers: newTimers,
+          activeTimerId: null,
+        };
+      }
+
+      return state;
+    },
+    {
+      timers: [],
+      activeTimerId: null,
+    }
+  );
+
   const [activeTimerId, setActiveTimerId] = useState<string | null>(null);
   const [passedTimeInSeconds, setPassedTimeInSeconds] = useState<number>(0);
 
-  const activeTimer: Timer | undefined = timers.find(
+  const activeTimer: Timer | undefined = timersState.timers.find(
     (timer) => timer.id === activeTimerId
   );
 
@@ -69,13 +120,9 @@ export const Home = () => {
   } = newTimerForm;
 
   const markCurrentTimerAsFinished = () => {
-    setTimers((oldState) => {
-      return oldState.map((timer) => {
-        if (timer.id === activeTimerId) {
-          return { ...timer, endDate: new Date() };
-        }
-        return timer;
-      });
+    dispatch({
+      type: 'MARK_CURRENT_TIMER_AS_FINISHED',
+      payload: activeTimerId,
     });
   };
 
@@ -93,18 +140,18 @@ export const Home = () => {
       startDate: new Date(),
     };
     setActiveTimerId(newTimer.id);
-    setTimers((oldState) => [...oldState, newTimer]);
+    dispatch({
+      type: 'ADD_TIMER',
+      payload: newTimer,
+    });
     reset();
   };
 
   const handleInterrupTimer = () => {
-    const updatedTimerList = timers.map((timer, index) => {
-      if (timer.id === activeTimerId) {
-        return { ...timer, interruptedDate: new Date() };
-      }
-      return timer;
+    dispatch({
+      type: 'INTERRUPT_CURRENT_TIMER',
+      payload: activeTimerId,
     });
-    setTimers(updatedTimerList);
     setActiveTimerId(null);
   };
 
@@ -142,6 +189,7 @@ export const Home = () => {
           </S.StartCountdownButton>
         )}
       </form>
+      <pre>{JSON.stringify(timersState.timers, null, 2)}</pre>
     </S.HomeContainer>
   );
 };
